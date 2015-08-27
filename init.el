@@ -17,16 +17,48 @@
 (tool-bar-mode 0)
 ;;(menu-bar-mode 0)
 
+
+;;-----使用4个空格来代替tab
+(setq-default indent-tabs-mode nil)
+(setq default-width 4)
+
 ;;-----显示时间
 (display-time-mode 1) 
 (setq display-time-24hr-format t) 
 (setq display-time-day-and-date t)
 
+;;-----设置删除记录  
+(setq kill-ring-max 200)
+
 ;;-----绑定c-j为新的一行，无论在什么位置----
 (global-set-key (kbd "C-j") '(lambda () 
-(interactive) 
-(move-end-of-line 1) 
-(newline)))
+                               (interactive) 
+                               (move-end-of-line 1) 
+                               (newline)))
+
+;;-----未选中时默认拷贝当前行
+(global-set-key "\M-w"
+                (lambda ()
+                  (interactive)
+                  (if mark-active
+                      (kill-ring-save (region-beginning)
+                                      (region-end))
+                    (progn
+                      (kill-ring-save (line-beginning-position)
+                                      (line-end-position))
+                      (message "copied line")))))
+
+;;-----未选中时默认剪切当前行
+(global-set-key "\C-w"
+                (lambda ()
+                  (interactive)
+                  (if mark-active
+                      (kill-region (region-beginning)
+                                   (region-end))
+                    (progn
+                      (kill-region (line-beginning-position)
+                                   (line-end-position))
+                      (message "killed line")))))
 
 ;;-----标记开始  
 (global-set-key (kbd "C-'") 'set-mark-command)
@@ -37,14 +69,23 @@
 ;;----设置光标为竖线  
 (setq-default cursor-type 'bar)
 
-;;-----括号匹配时显示另外一边的括号，而不是烦人的跳到另一个括号  
+;;-----括号匹配时显示另外一边的括号
 (show-paren-mode t)  
 (setq show-paren-style 'parentheses)
 
 ;;----关闭开机画面  
 (setq inhibit-startup-message t)
 
-;;----tabbar栏设置 alt jk 左右移动，所以buff一个分组------
+;;-----智能自动补全括号全局启用智能补全括号,再输入一次括号就到后面了
+(require 'autopair)      
+(autopair-global-mode 1)
+
+;;-----‘C-x M-o’ 切换显示隐藏文件B
+(require 'dired-x)
+(setq dired-omit-files "^\\...+$")
+(add-hook 'dired-mode-hook (lambda () (dired-omit-mode 1)))
+
+;;----tabbar栏设置 
 (require 'tabbar)
 (tabbar-mode 1)
 
@@ -72,30 +113,27 @@ Return a list of one element based on major mode."
 Use ska-jump-to-register to jump back to the stored
 position."
   (interactive)
-  (setq zmacs-region-stays t)
   (point-to-register 8))
 
 (defun ska-jump-to-register()
   "Switches between current cursorposition and position
 that was stored with ska-point-to-register."
   (interactive)
-  (setq zmacs-region-stays t)
   (let ((tmp (point-marker)))
-        (jump-to-register 8)
-        (set-register 8 tmp)))
+    (jump-to-register 8)
+    (set-register 8 tmp)))
 
 
-;-----定义c-l拷贝当前行-----------
+;;-----定义c-l拷贝当前行-----------
 (defun copy-line (&optional arg)
-;"Save current line into Kill-Ring without mark the line"
-(interactive "P")
-(let ((beg (line-beginning-position))
-   (end (line-end-position arg)))
-(copy-region-as-kill beg end))
-)
+  (interactive "P")
+  (let ((beg (line-beginning-position))
+        (end (line-end-position arg)))
+    (copy-region-as-kill beg end))
+  )
 (global-set-key (kbd "C-l") 'copy-line)
 
-;------------------------alt和箭头整行移动-------------------
+;;------------------------alt和箭头整行移动-------------------
 (global-set-key [(meta up)] 'move-line-up)
 (global-set-key [(meta down)] 'move-line-down)
 (defun move-line (&optional n)
@@ -104,7 +142,7 @@ that was stored with ska-point-to-register."
     (setq n 1))
   (let ((col (current-column)))
     (beginning-of-line)
-    (next-line 1)
+    (forward-line 1)
     (transpose-lines n)
     (previous-line 1)
     (forward-char col)))
@@ -123,10 +161,10 @@ that was stored with ska-point-to-register."
 
 ;;-----设置日历
 (setq calendar-load-hook
-'(lambda ()
-(set-face-foreground 'diary-face "skyblue")
-(set-face-background 'holiday-face "slate blue")
-(set-face-foreground 'holiday-face "white")))
+      '(lambda ()
+         (set-face-foreground 'diary-face "skyblue")
+         (set-face-background 'holiday-face "slate blue")
+         (set-face-foreground 'holiday-face "white")))
 
 ;;-----让emacs能计算日出日落的时间，在 calendar 上用 S 即可看到
 (setq calendar-latitude +39.54)
@@ -135,10 +173,49 @@ that was stored with ska-point-to-register."
 
 ;;-----设置阴历显示，在 calendar 上用 pC 显示阴历
 (setq chinese-calendar-celestial-stem
-  ["甲" "乙" "丙" "丁" "戊" "己" "庚" "辛" "壬" "癸"])
+      ["甲" "乙" "丙" "丁" "戊" "己" "庚" "辛" "壬" "癸"])
 (setq chinese-calendar-terrestrial-branch
-  ["子" "丑" "寅" "卯" "辰" "巳" "戊" "未" "申" "酉" "戌" "亥"])
+      ["子" "丑" "寅" "卯" "辰" "巳" "戊" "未" "申" "酉" "戌" "亥"])
 (setq calendar-remove-frame-by-deleting t)
 (setq calendar-week-start-day 1) ; 设置星期一为每周的第一天
 (setq mark-diary-entries-in-calendar t) ; 标记calendar上有diary的日期
+
+
+
+;;-----自动打开上次的文件
+(setq desktop-save t)  
+(setq desktop-load-locked-desktop t)  
+(setq *desktop-dir* (list (expand-file-name "~/.emacs.d/desktop")))  
+(setq desktop-path '("~/.emacs.d/"))  
+(setq desktop-dirname "~/.emacs.d/")  
+(setq desktop-base-file-name ".emacs-desktop")  
+(desktop-save-mode 1)  
+(desktop-read)  
+
+;;-----标题栏显示当前文件的绝对路径
+(defun frame-title-string ()
+  (let
+      ((fname (or
+               (buffer-file-name (current-buffer))
+               (buffer-name))))
+    (when (string-match (getenv "HOME") fname)
+      (setq fname (replace-match "~" t t fname))        )
+    fname))
+(setq frame-title-format '("" system-name "  File: "(:eval (frame-title-string))))
+
+;;-----ctrl + - 在透明和不透明之间切换
+(global-set-key (kbd "s-b") 'loop-alpha)
+(setq alpha-list '((0 0) (100 100)))  
+(defun loop-alpha ()  
+  (interactive)  
+  (let ((h (car alpha-list)))                  
+    ((lambda (a ab)  
+       (set-frame-parameter (selected-frame) 'alpha (list a ab))  
+       (add-to-list 'default-frame-alist (cons 'alpha (list a ab)))  
+       ) (car h) (car (cdr h)))  
+    (setq alpha-list (cdr (append alpha-list (list h))))  
+    )  
+  )  
+
+
 
